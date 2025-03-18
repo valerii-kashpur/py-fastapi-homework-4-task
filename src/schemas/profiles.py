@@ -30,7 +30,7 @@ class ProfileCreateRequestSchema(BaseModel):
             date_of_birth: date = Form(...),
             info: str = Form(...),
             avatar: UploadFile = File(...)
-    ) -> "ProfileCreateSchema":
+    ) -> "ProfileCreateRequestSchema":
         return cls(
             first_name=first_name,
             last_name=last_name,
