@@ -62,21 +62,17 @@ router = APIRouter()
             "description": "Internal Server Error - An error occurred during user creation.",
             "content": {
                 "application/json": {
-                    "example": {
-                        "detail": "An error occurred during user creation."
-                    }
+                    "example": {"detail": "An error occurred during user creation."}
                 }
             },
         },
     },
 )
 async def register_user(
-        user_data: UserRegistrationRequestSchema,
-        background_tasks: BackgroundTasks,
-        email_sender: EmailSenderInterface = Depends(
-            get_accounts_email_notificator
-        ),
-        db: AsyncSession = Depends(get_db),
+    user_data: UserRegistrationRequestSchema,
+    background_tasks: BackgroundTasks,
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
+    db: AsyncSession = Depends(get_db),
 ) -> UserRegistrationResponseSchema:
     """
     Endpoint for user registration.
@@ -106,9 +102,7 @@ async def register_user(
             detail=f"A user with this email {user_data.email} already exists.",
         )
 
-    stmt = select(UserGroupModel).where(
-        UserGroupModel.name == UserGroupEnum.USER
-    )
+    stmt = select(UserGroupModel).where(UserGroupModel.name == UserGroupEnum.USER)
     result = await db.execute(stmt)
     user_group = result.scalars().first()
     if not user_group:
@@ -159,21 +153,17 @@ async def register_user(
     responses={
         400: {
             "description": "Bad Request - The activation token is invalid or expired, "
-                           "or the user account is already active.",
+            "or the user account is already active.",
             "content": {
                 "application/json": {
                     "examples": {
                         "invalid_token": {
                             "summary": "Invalid Token",
-                            "value": {
-                                "detail": "Invalid or expired activation token."
-                            },
+                            "value": {"detail": "Invalid or expired activation token."},
                         },
                         "already_active": {
                             "summary": "Account Already Active",
-                            "value": {
-                                "detail": "User account is already active."
-                            },
+                            "value": {"detail": "User account is already active."},
                         },
                     }
                 }
@@ -182,12 +172,10 @@ async def register_user(
     },
 )
 async def activate_account(
-        activation_data: UserActivationRequestSchema,
-        background_tasks: BackgroundTasks,
-        email_sender: EmailSenderInterface = Depends(
-            get_accounts_email_notificator
-        ),
-        db: AsyncSession = Depends(get_db),
+    activation_data: UserActivationRequestSchema,
+    background_tasks: BackgroundTasks,
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
+    db: AsyncSession = Depends(get_db),
 ) -> MessageResponseSchema:
     """
     Endpoint to activate a user's account.
@@ -223,11 +211,9 @@ async def activate_account(
 
     now_utc = datetime.now(timezone.utc)
     if (
-            not token_record
-            or cast(datetime, token_record.expires_at).replace(
-        tzinfo=timezone.utc
-    )
-            < now_utc
+        not token_record
+        or cast(datetime, token_record.expires_at).replace(tzinfo=timezone.utc)
+        < now_utc
     ):
         if token_record:
             await db.delete(token_record)
@@ -256,9 +242,7 @@ async def activate_account(
         login_link,
     )
 
-    return MessageResponseSchema(
-        message="User account activated successfully."
-    )
+    return MessageResponseSchema(message="User account activated successfully.")
 
 
 @router.post(
@@ -266,18 +250,16 @@ async def activate_account(
     response_model=MessageResponseSchema,
     summary="Request Password Reset Token",
     description=(
-            "Allows a user to request a password reset token. If the user exists and is active, "
-            "a new token will be generated and any existing tokens will be invalidated."
+        "Allows a user to request a password reset token. If the user exists and is active, "
+        "a new token will be generated and any existing tokens will be invalidated."
     ),
     status_code=status.HTTP_200_OK,
 )
 async def request_password_reset_token(
-        data: PasswordResetRequestSchema,
-        background_tasks: BackgroundTasks,
-        email_sender: EmailSenderInterface = Depends(
-            get_accounts_email_notificator
-        ),
-        db: AsyncSession = Depends(get_db),
+    data: PasswordResetRequestSchema,
+    background_tasks: BackgroundTasks,
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
+    db: AsyncSession = Depends(get_db),
 ) -> MessageResponseSchema:
     """
     Endpoint to request a password reset token.
@@ -334,8 +316,8 @@ async def request_password_reset_token(
     responses={
         400: {
             "description": (
-                    "Bad Request - The provided email or token is invalid, "
-                    "the token has expired, or the user account is not active."
+                "Bad Request - The provided email or token is invalid, "
+                "the token has expired, or the user account is not active."
             ),
             "content": {
                 "application/json": {
@@ -365,12 +347,10 @@ async def request_password_reset_token(
     },
 )
 async def reset_password(
-        data: PasswordResetCompleteRequestSchema,
-        background_tasks: BackgroundTasks,
-        email_sender: EmailSenderInterface = Depends(
-            get_accounts_email_notificator
-        ),
-        db: AsyncSession = Depends(get_db),
+    data: PasswordResetCompleteRequestSchema,
+    background_tasks: BackgroundTasks,
+    email_sender: EmailSenderInterface = Depends(get_accounts_email_notificator),
+    db: AsyncSession = Depends(get_db),
 ) -> MessageResponseSchema:
     """
     Endpoint for resetting a user's password.
@@ -396,8 +376,7 @@ async def reset_password(
     user = result.scalars().first()
     if not user or not user.is_active:
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email or token."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email or token."
         )
 
     stmt = select(PasswordResetTokenModel).filter_by(user_id=user.id)
@@ -409,19 +388,15 @@ async def reset_password(
             await db.run_sync(lambda s: s.delete(token_record))
             await db.commit()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email or token."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email or token."
         )
 
-    expires_at = cast(datetime, token_record.expires_at).replace(
-        tzinfo=timezone.utc
-    )
+    expires_at = cast(datetime, token_record.expires_at).replace(tzinfo=timezone.utc)
     if expires_at < datetime.now(timezone.utc):
         await db.run_sync(lambda s: s.delete(token_record))
         await db.commit()
         raise HTTPException(
-            status_code=status.HTTP_400_BAD_REQUEST,
-            detail="Invalid email or token."
+            status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid email or token."
         )
 
     try:
@@ -438,9 +413,7 @@ async def reset_password(
     login_link = "http://127.0.0.1/accounts/login/"
 
     background_tasks.add_task(
-        email_sender.send_password_reset_complete_email,
-        str(data.email),
-        login_link
+        email_sender.send_password_reset_complete_email, str(data.email), login_link
     )
 
     return MessageResponseSchema(message="Password reset successfully.")
@@ -482,10 +455,10 @@ async def reset_password(
     },
 )
 async def login_user(
-        login_data: UserLoginRequestSchema,
-        db: AsyncSession = Depends(get_db),
-        settings: BaseAppSettings = Depends(get_settings),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+    login_data: UserLoginRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    settings: BaseAppSettings = Depends(get_settings),
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
 ) -> UserLoginResponseSchema:
     """
     Endpoint for user login.
@@ -570,31 +543,25 @@ async def login_user(
         400: {
             "description": "Bad Request - The provided refresh token is invalid or expired.",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Token has expired."}
-                }
+                "application/json": {"example": {"detail": "Token has expired."}}
             },
         },
         401: {
             "description": "Unauthorized - Refresh token not found.",
             "content": {
-                "application/json": {
-                    "example": {"detail": "Refresh token not found."}
-                }
+                "application/json": {"example": {"detail": "Refresh token not found."}}
             },
         },
         404: {
             "description": "Not Found - The user associated with the token does not exist.",
-            "content": {
-                "application/json": {"example": {"detail": "User not found."}}
-            },
+            "content": {"application/json": {"example": {"detail": "User not found."}}},
         },
     },
 )
 async def refresh_access_token(
-        token_data: TokenRefreshRequestSchema,
-        db: AsyncSession = Depends(get_db),
-        jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
+    token_data: TokenRefreshRequestSchema,
+    db: AsyncSession = Depends(get_db),
+    jwt_manager: JWTAuthManagerInterface = Depends(get_jwt_auth_manager),
 ) -> TokenRefreshResponseSchema:
     """
     Endpoint to refresh an access token.
@@ -617,9 +584,7 @@ async def refresh_access_token(
             - 404 Not Found if the user associated with the token does not exist.
     """
     try:
-        decoded_token = jwt_manager.decode_refresh_token(
-            token_data.refresh_token
-        )
+        decoded_token = jwt_manager.decode_refresh_token(token_data.refresh_token)
         user_id = decoded_token.get("user_id")
     except BaseSecurityError as error:
         raise HTTPException(
