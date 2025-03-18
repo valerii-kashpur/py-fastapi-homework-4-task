@@ -509,11 +509,11 @@ async def login_user(
         await db.flush()
         await db.commit()
 
-    except SQLAlchemyError as e:
+    except SQLAlchemyError:
         await db.rollback()
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail=f"Database error: {str(e)}",
+            detail="An error occurred while processing the request.",
         )
     except AttributeError as e:
         raise HTTPException(
